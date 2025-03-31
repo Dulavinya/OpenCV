@@ -1,0 +1,77 @@
+import cv2
+import pyautogui
+from collections import Counter
+from module import findnameoflandmark, findpostion, speak
+
+gesture_dict = {
+    (1, 1, 1, 1, 1): "Open Hand",  # Screenshot trigger
+    (0, 1, 1, 0, 0): "Victory Sign",
+    (1, 0, 0, 0, 0): "Thumbs Up",
+    (0, 0, 0, 0, 0): "Fist"
+}
+
+def recognize_gesture(finger_status):
+    return gesture_dict.get(tuple(finger_status), "Unknown Gesture")
+
+def count_fingers(frame):
+    positions = findpostion(frame)
+    landmarks = findnameoflandmark(frame)
+    
+    if not positions or not landmarks:
+        return None, None, None  # No hand detected
+    
+    fingers = []
+    
+    # Thumb Detection
+    if positions[4][1] > positions[3][1]:
+        fingers.append(1)
+    else:
+        fingers.append(0)
+    
+    # Other Fingers
+    tip_ids = [8, 12, 16, 20]
+    for tip in tip_ids:
+        if tip in positions and (tip - 2) in positions:
+            fingers.append(1 if positions[tip][2] < positions[tip - 2][2] else 0)
+    
+    count = Counter(fingers)
+    gesture = recognize_gesture(fingers)
+    return count[1], count[0], gesture  # (up, down, gesture)
+
+# Initialize camera
+cap = cv2.VideoCapture(0)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to capture frame. Exiting...")
+        break  
+    
+    frame = cv2.resize(frame, (640, 480))
+    up, down, gesture = count_fingers(frame)
+    
+    if up is not None and down is not None:
+        text = f'Fingers up: {up}, Fingers down: {down} ({gesture})'
+        color = (0, 255, 0)  
+    else:
+        text = "No hand detected"
+        color = (0, 0, 255)  
+    
+    cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+    cv2.imshow("Frame", frame)
+    
+    # Screenshot feature for Open Hand gesture
+    if gesture == "Open Hand":
+        pyautogui.screenshot("screenshot.png")
+        print("Screenshot saved!")
+    
+    key = cv2.waitKey(1) & 0xFF
+    
+    if key == ord("q") and up is not None and down is not None:
+        speak(f"You have {up} fingers up and {down} fingers down, gesture detected: {gesture}")
+    
+    if key == ord("s"):
+        break
+
+cap.release()
+cv2.destroyAllWindows()

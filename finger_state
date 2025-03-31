@@ -9,24 +9,40 @@ def count_fingers(frame):
     if not positions or not landmarks:
         return None, None  # No hand detected
     
-    fingers = []
+    hands = {}  # Dictionary to store hand positions
+    for pos in positions:
+        hand_id = pos[0] // 21  # Assuming each hand has 21 landmarks
+        if hand_id not in hands:
+            hands[hand_id] = []
+        hands[hand_id].append(pos)
     
-    # Thumb (special case: check if it's to the left or right of the index finger)
-    if positions[4][1] > positions[3][1]:
-        fingers.append(1)  # Thumb is up
-    else:
-        fingers.append(0)  # Thumb is down
+    total_up, total_down = 0, 0
     
-    # Other fingers (compare tip y-coordinates with PIP joints)
-    tip_ids = [8, 12, 16, 20]
-    for tip in tip_ids:
-        if positions[tip][2] < positions[tip - 2][2]:
-            fingers.append(1)  # Finger is up
+    for hand in hands.values():
+        if len(hand) < 21:
+            continue
+        
+        fingers = []
+        
+        # Thumb (special case: check if it's to the left or right of the index finger)
+        if hand[4][1] > hand[3][1]:
+            fingers.append(1)  # Thumb is up
         else:
-            fingers.append(0)  # Finger is down
+            fingers.append(0)  # Thumb is down
+        
+        # Other fingers (compare tip y-coordinates with PIP joints)
+        tip_ids = [8, 12, 16, 20]
+        for tip in tip_ids:
+            if hand[tip][2] < hand[tip - 2][2]:
+                fingers.append(1)  # Finger is up
+            else:
+                fingers.append(0)  # Finger is down
+        
+        count = Counter(fingers)
+        total_up += count[1]
+        total_down += count[0]
     
-    count = Counter(fingers)
-    return count[1], count[0]  # (up, down)
+    return total_up, total_down  # (up, down)
 
 # Initialize camera
 cap = cv2.VideoCapture(0)
@@ -40,11 +56,11 @@ while True:
     up, down = count_fingers(frame)
     
     if up is not None and down is not None:
-        text = f'Fingers up: {up}, Fingers down: {down}'
+        text = f'Total Fingers up: {up}, Total Fingers down: {down}'
         print(text)
         cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     else:
-        cv2.putText(frame, "No hand detected", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.putText(frame, "No hands detected", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
