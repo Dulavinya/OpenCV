@@ -12,45 +12,37 @@ def count_fingers(frame):
 
     fingers = []
 
-    # Thumb Detection (Using X-axis for left/right hand)
-    thumb_tip = positions[4][1]
-    thumb_base = positions[2][1]
-    thumb_up = positions[4][2] < positions[2][2]  # Thumb above base
-    thumb_down = positions[4][2] > positions[2][2]  # Thumb below base
+    # Proper Thumb Detection
+    thumb_up = positions[4][2] < positions[2][2]  # Thumb tip is above index base
+    thumb_down = positions[4][2] > positions[2][2]  # Thumb tip is below index base
 
-    # Determine if the thumb is extended
-    if thumb_tip > thumb_base:  # Right hand
-        thumb_extended = positions[4][0] > positions[3][0]
-    else:  # Left hand
-        thumb_extended = positions[4][0] < positions[3][0]
-
-    fingers.append(int(thumb_extended))
-
-    # Other fingers (Tip above PIP joint means it's extended)
+    # Check Other Fingers (Tip above PIP joint means it's extended)
     tip_ids = [8, 12, 16, 20]
     for tip in tip_ids:
-        fingers.append(int(positions[tip][2] < positions[tip - 2][2]))
+        if positions[tip][2] < positions[tip - 2][2]:  
+            fingers.append(1)  # Finger is up
+        else:
+            fingers.append(0)  # Finger is down
 
     count = Counter(fingers)
     up, down = count[1], count[0]
 
-    # Gesture Recognition
+    # Fixing Gesture Detection
     gesture = "Unknown"
-    if up == 5:
-        gesture = "Open Hand"
+    if up == 4 and fingers[0] == 1:
+        gesture = "Open Hand "
     elif up == 0:
-        gesture = "Fist"
-    elif fingers == [0, 1, 1, 0, 0]:
-        gesture = "Peace Sign"
-    elif fingers == [0, 1, 0, 0, 0]:
-        gesture = "Pointing"
-    elif fingers == [1, 0, 0, 0, 0]:
+        gesture = "Fist "
+        #elif up == 2 and fingers[1] == 1 and fingers[2] == 1:
+    elif up == 2 and fingers[1] == 1 and fingers[2] == 1:
+        gesture = "Victory Sign "
+    elif up == 1 and fingers[0] == 1 and all(f == 0 for f in fingers[1:]):
         if thumb_up:
-            gesture = "Thumbs Up"
+            gesture = "Thumbs Up "
         elif thumb_down:
-            gesture = "Thumbs Down"
-    elif fingers == [1, 0, 0, 0, 1]:  # Thumb and pinky extended
-        gesture = "Cool Sign"
+            gesture = "Thumbs Down "
+    elif up == 1 and fingers[0] == 0 and fingers[1] == 1:
+        gesture = "Pointing "
 
     return up, down, gesture
 
