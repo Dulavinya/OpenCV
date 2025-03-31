@@ -57,7 +57,7 @@ while cap.isOpened():
         text = "No hand detected"
         color = (0, 0, 255)  
     
-    cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+    cv2.putText(frame, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, .6, color, 2)
     cv2.imshow("Frame", frame)
     
     # Screenshot feature for Open Hand gesture
